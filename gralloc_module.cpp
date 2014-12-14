@@ -59,6 +59,8 @@ static int gralloc_device_open(const hw_module_t *module, const char *name, hw_d
 
 static int gralloc_register_buffer(gralloc_module_t const *module, buffer_handle_t handle)
 {
+	MALI_IGNORE(module);
+
 	if (private_handle_t::validate(handle) < 0)
 	{
 		AERR("Registering invalid buffer 0x%p, returning error", handle);
@@ -193,6 +195,8 @@ cleanup:
 
 static int gralloc_unregister_buffer(gralloc_module_t const *module, buffer_handle_t handle)
 {
+	MALI_IGNORE(module);
+
 	if (private_handle_t::validate(handle) < 0)
 	{
 		AERR("unregistering invalid buffer 0x%p, returning error", handle);
@@ -229,7 +233,7 @@ static int gralloc_unregister_buffer(gralloc_module_t const *module, buffer_hand
 
 			if (munmap(base, size) < 0)
 			{
-				AERR("Could not munmap base:0x%p size:%d '%s'", base, size, strerror(errno));
+				AERR("Could not munmap base:0x%p size:%lu '%s'", base, (unsigned long)size, strerror(errno));
 			}
 
 #else
@@ -276,11 +280,18 @@ static int gralloc_lock(gralloc_module_t const *module, buffer_handle_t handle, 
 		*vaddr = (void *)hnd->base;
 	}
 
+	MALI_IGNORE(module);
+	MALI_IGNORE(l);
+	MALI_IGNORE(t);
+	MALI_IGNORE(w);
+	MALI_IGNORE(h);
 	return 0;
 }
 
 static int gralloc_unlock(gralloc_module_t const *module, buffer_handle_t handle)
 {
+	MALI_IGNORE(module);
+
 	if (private_handle_t::validate(handle) < 0)
 	{
 		AERR("Unlocking invalid buffer 0x%p, returning error", handle);

@@ -101,7 +101,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 #if GRALLOC_ARM_DMA_BUF_MODULE
 	{
 		private_module_t *m = reinterpret_cast<private_module_t *>(dev->common.module);
-		struct ion_handle *ion_hnd;
+		ion_user_handle_t ion_hnd;
 		unsigned char *cpu_ptr;
 		int shared_fd;
 		int ret;
@@ -162,7 +162,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 
 		if (0 != ret)
 		{
-			AERR("munmap failed for base:%p size: %d", cpu_ptr, size);
+			AERR("munmap failed for base:%p size: %lu", cpu_ptr, (unsigned long)size);
 		}
 
 		ret = ion_free(m->ion_client, ion_hnd);
@@ -177,6 +177,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 #endif
 
 #if GRALLOC_ARM_UMP_MODULE
+	MALI_IGNORE(dev);
 	{
 		ump_handle ump_mem_handle;
 		void *cpu_ptr;
@@ -195,6 +196,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 		}
 
 #ifdef GRALLOC_SIMULATE_FAILURES
+
 		/* if the failure condition matches, fail this iteration */
 		if (__ump_alloc_should_fail())
 		{
@@ -216,7 +218,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 					if (UMP_INVALID_SECURE_ID != ump_id)
 					{
 						private_handle_t *hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP, usage, size, cpu_ptr,
-						private_handle_t::LOCK_STATE_MAPPED, ump_id, ump_mem_handle);
+						        private_handle_t::LOCK_STATE_MAPPED, ump_id, ump_mem_handle);
 
 						if (NULL != hnd)
 						{
@@ -247,6 +249,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 				AERR("gralloc_alloc_buffer() failed to allocate UMP memory. size:%d constraints: %d", size, constraints);
 			}
 		}
+
 		return -1;
 	}
 #endif
@@ -362,14 +365,14 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 	size_t stride;
 
 	if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12
-	/* HAL_PIXEL_FORMAT_YCbCr_420_SP, HAL_PIXEL_FORMAT_YCbCr_420_P, HAL_PIXEL_FORMAT_YCbCr_422_I are not defined in Android.
- 	 * To enable Mali DDK EGLImage support for those formats, firstly, you have to add them in Android system/core/include/system/graphics.h.
- 	 * Then, define SUPPORT_LEGACY_FORMAT in the same header file(Mali DDK will also check this definition).
-	 */
-#ifdef SUPPORT_LEGACY_FORMAT 
-		|| format == HAL_PIXEL_FORMAT_YCbCr_420_SP || format == HAL_PIXEL_FORMAT_YCbCr_420_P || format == HAL_PIXEL_FORMAT_YCbCr_422_I
+	        /* HAL_PIXEL_FORMAT_YCbCr_420_SP, HAL_PIXEL_FORMAT_YCbCr_420_P, HAL_PIXEL_FORMAT_YCbCr_422_I are not defined in Android.
+	         * To enable Mali DDK EGLImage support for those formats, firstly, you have to add them in Android system/core/include/system/graphics.h.
+	         * Then, define SUPPORT_LEGACY_FORMAT in the same header file(Mali DDK will also check this definition).
+	         */
+#ifdef SUPPORT_LEGACY_FORMAT
+	        || format == HAL_PIXEL_FORMAT_YCbCr_420_SP || format == HAL_PIXEL_FORMAT_YCbCr_420_P || format == HAL_PIXEL_FORMAT_YCbCr_422_I
 #endif
-	)
+	   )
 	{
 		switch (format)
 		{
@@ -384,12 +387,14 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 
 				break;
 #ifdef SUPPORT_LEGACY_FORMAT
+
 			case HAL_PIXEL_FORMAT_YCbCr_422_I:
 				stride = GRALLOC_ALIGN(w, 16);
 				size = h * stride * 2;
 
-                               break;
+				break;
 #endif
+
 			default:
 				return -EINVAL;
 		}
@@ -549,7 +554,7 @@ static int alloc_device_free(alloc_device_t *dev, buffer_handle_t handle)
 
 		if (0 != ion_free(m->ion_client, hnd->ion_hnd))
 		{
-			AERR("Failed to ion_free( ion_client: %d ion_hnd: %p )", m->ion_client, hnd->ion_hnd);
+			AERR("Failed to ion_free( ion_client: %d ion_hnd: %p )", m->ion_client, (void *)(uintptr_t)hnd->ion_hnd);
 		}
 
 		memset((void *)hnd, 0, sizeof(*hnd));
@@ -591,6 +596,7 @@ static int alloc_device_close(struct hw_device_t *device)
 
 int alloc_device_open(hw_module_t const *module, const char *name, hw_device_t **device)
 {
+	MALI_IGNORE(name);
 	alloc_device_t *dev;
 
 	dev = new alloc_device_t;

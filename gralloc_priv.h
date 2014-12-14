@@ -61,6 +61,17 @@ struct fb_dmabuf_export
 	__u32 flags;
 };
 /*#define FBIOGET_DMABUF    _IOR('F', 0x21, struct fb_dmabuf_export)*/
+
+#if PLATFORM_SDK_VERSION >= 21
+typedef int ion_user_handle_t;
+#define ION_INVALID_HANDLE 0
+#else
+
+typedef struct ion_handle *ion_user_handle_t;
+
+#define ION_INVALID_HANDLE NULL
+#endif /* new libion */
+
 #endif /* GRALLOC_ARM_DMA_BUF_MODULE */
 
 
@@ -76,6 +87,7 @@ struct fb_dmabuf_export
 #include <ump/ump.h>
 #endif
 
+#define MALI_IGNORE(x) (void)x
 typedef enum
 {
 	MALI_YUV_NO_INFO,
@@ -172,7 +184,7 @@ struct private_handle_t
 	int     offset;
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
-	struct ion_handle *ion_hnd;
+	ion_user_handle_t ion_hnd;
 #define GRALLOC_ARM_DMA_BUF_NUM_INTS 2
 #else
 #define GRALLOC_ARM_DMA_BUF_NUM_INTS 0
@@ -219,7 +231,7 @@ struct private_handle_t
 		offset(0)
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		,
-		ion_hnd(NULL)
+		ion_hnd(ION_INVALID_HANDLE)
 #endif
 
 	{
@@ -251,7 +263,7 @@ struct private_handle_t
 #endif
 		fd(0),
 		offset(0),
-		ion_hnd(NULL)
+		ion_hnd(ION_INVALID_HANDLE)
 
 	{
 		version = sizeof(native_handle);
@@ -286,7 +298,7 @@ struct private_handle_t
 		offset(fb_offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		,
-		ion_hnd(NULL)
+		ion_hnd(ION_INVALID_HANDLE)
 #endif
 
 	{

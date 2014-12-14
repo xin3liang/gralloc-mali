@@ -428,6 +428,7 @@ static int fb_close(struct hw_device_t *device)
 
 int compositionComplete(struct framebuffer_device_t *dev)
 {
+	MALI_IGNORE(dev);
 	/* By doing a finish here we force the GL driver to start rendering
 	   all the drawcalls up to this point, and to wait for the rendering to be complete.*/
 	glFinish();
@@ -498,5 +499,6 @@ int framebuffer_device_open(hw_module_t const *module, const char *name, hw_devi
 	*device = &dev->common;
 	status = 0;
 
+	MALI_IGNORE(name);
 	return status;
 }

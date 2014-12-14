@@ -168,22 +168,11 @@ static int alloc_device_alloc(alloc_device_t* dev, int w, int h, int format, int
 
 	size_t size;
 	size_t stride;
-	if (format == HAL_PIXEL_FORMAT_YCbCr_420_SP || 
-	    format == HAL_PIXEL_FORMAT_YCbCr_422_SP ||
-		 format == HAL_PIXEL_FORMAT_YV12 ) 
+	if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12 ) 
 	{
-		int vstride;
 		switch (format)
 		{
-			case HAL_PIXEL_FORMAT_YCbCr_420_SP:
-				stride = (w + 1) & ~1; 
-				size = stride * h * 2;
-				break;
-			case HAL_PIXEL_FORMAT_YCbCr_422_SP:
-				stride = (w + 1) & ~1; 
-				vstride = (h+1) & ~1;
-				size = (stride * vstride) + (w/2 * h/2) * 2;
-				break;
+			case HAL_PIXEL_FORMAT_YCrCb_420_SP:
 			case HAL_PIXEL_FORMAT_YV12:
 				stride = (w + 15) & ~15;
 				size = h * (stride + stride/2);

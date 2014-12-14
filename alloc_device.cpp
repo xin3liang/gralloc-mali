@@ -25,6 +25,8 @@
 #include <hardware/hardware.h>
 #include <hardware/gralloc.h>
 
+#include <sys/ioctl.h>
+
 #include "alloc_device.h"
 #include "gralloc_priv.h"
 #include "gralloc_helper.h"
@@ -103,9 +105,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 		int shared_fd;
 		int ret;
 
-		ret = ion_alloc(m->ion_client, size, 0, ION_HEAP_SYSTEM_MASK,
-		                ION_FLAG_CACHED | ION_FLAG_CACHED_NEEDS_SYNC,
-		                &ion_hnd );
+		ret = ion_alloc(m->ion_client, size, 0, ION_HEAP_SYSTEM_MASK, 0, &ion_hnd);
 		if ( ret != 0) 
 		{
 			AERR("Failed to ion_alloc from ion_client:%d", m->ion_client);
@@ -135,7 +135,6 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 		{
 			hnd->share_fd = shared_fd;
 			hnd->ion_hnd = ion_hnd;
-			hnd->ion_client = m->ion_client;
 			*pHandle = hnd;
 			return 0;
 		}
@@ -276,6 +275,33 @@ static int gralloc_alloc_framebuffer_locked(alloc_device_t* dev, size_t size, in
 	// The entire framebuffer memory is already mapped, now create a buffer object for parts of this memory
 	private_handle_t* hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, size, vaddr,
 	                                             0, dup(m->framebuffer->fd), vaddr - m->framebuffer->base);
+#if GRALLOC_ARM_UMP_MODULE
+	hnd->ump_id = m->framebuffer->ump_id;
+	/* create a backing ump memory handle if the framebuffer is exposed as a secure ID */
+	if ( (int)UMP_INVALID_SECURE_ID != hnd->ump_id )
+	{
+		hnd->ump_mem_handle = (int)ump_handle_create_from_secure_id( hnd->ump_id );
+		if ( (int)UMP_INVALID_MEMORY_HANDLE == hnd->ump_mem_handle )
+		{
+			AINF("warning: unable to create UMP handle from secure ID %i\n", hnd->ump_id);
+		}
+	}
+#endif
+
+#if GRALLOC_ARM_DMA_BUF_MODULE
+	{
+	#ifdef FBIOGET_DMABUF
+		struct fb_dmabuf_export fb_dma_buf;
+
+		if ( ioctl( m->framebuffer->fd, FBIOGET_DMABUF, &fb_dma_buf ) == 0 )
+		{
+			AINF("framebuffer accessed with dma buf (fd 0x%x)\n", (int)fb_dma_buf.fd);
+			hnd->share_fd = fb_dma_buf.fd;
+		}
+	#endif
+	}
+#endif
+
 	*pHandle = hnd;
 
 	return 0;
@@ -378,6 +404,13 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 		int index = (hnd->base - m->framebuffer->base) / bufferSize;
 		m->bufferMask &= ~(1<<index); 
 		close(hnd->fd);
+
+#if GRALLOC_ARM_UMP_MODULE
+		if ( (int)UMP_INVALID_MEMORY_HANDLE != hnd->ump_mem_handle )
+		{
+			ump_reference_release((ump_handle)hnd->ump_mem_handle);
+		}
+#endif
 	}
 	else if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_UMP)
 	{
@@ -391,9 +424,10 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 	else if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION )
 	{
 #if GRALLOC_ARM_DMA_BUF_MODULE
+		private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
 		if ( 0 != munmap( (void*)hnd->base, hnd->size ) ) AERR( "Failed to munmap handle 0x%x", (unsigned int)hnd );
 		close( hnd->share_fd );
-		if ( 0 != ion_free( hnd->ion_client, hnd->ion_hnd ) ) AERR( "Failed to ion_free( ion_client: %d ion_hnd: %p )", hnd->ion_client, hnd->ion_hnd );
+		if ( 0 != ion_free( m->ion_client, hnd->ion_hnd ) ) AERR( "Failed to ion_free( ion_client: %d ion_hnd: %p )", m->ion_client, hnd->ion_hnd );
 		memset( (void*)hnd, 0, sizeof( *hnd ) );
 #else 
 		AERR( "Can't free dma_buf memory for handle:0x%x. Not supported.", (unsigned int)hnd );

@@ -132,16 +132,34 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 		int ret;
 		unsigned char *mappedAddress;
 		size_t size = hnd->size;
-	    /* a second user process must obtain a client handle first via ion_open before it can obtain the shared ion buffer*/	
-		hnd->ion_client = ion_open();
-		
-		if ( hnd->ion_client < 0 ) 
+		hw_module_t * pmodule = NULL;
+		private_module_t *m=NULL;
+		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0) 
 		{
-			AERR( "Could not open ion device for handle: 0x%x", (unsigned int)hnd );
+			m = reinterpret_cast<private_module_t *>(pmodule);
+		}
+		else
+		{
+			AERR("Could not get gralloc module for handle: 0x%x", (unsigned int)hnd);
 			retval = -errno;
 			goto cleanup;
 		}
-		
+		/* the test condition is set to m->ion_client <= 0 here, because:
+		 * 1) module structure are initialized to 0 if no initial value is applied
+		 * 2) a second user process should get a ion fd greater than 0.
+		 */
+		if (m->ion_client <= 0)
+		{
+	    /* a second user process must obtain a client handle first via ion_open before it can obtain the shared ion buffer*/	
+			m->ion_client = ion_open();
+
+			if (m->ion_client < 0) 
+			{
+				AERR( "Could not open ion device for handle: 0x%x", (unsigned int)hnd );
+				retval = -errno;
+				goto cleanup;
+			}
+		}
 		mappedAddress = (unsigned char*)mmap( NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, hnd->share_fd, 0 );
 		
 		if ( MAP_FAILED == mappedAddress )
@@ -276,7 +294,17 @@ static int gralloc_unlock(gralloc_module_t const* module, buffer_handle_t handle
 	else if ( hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION && hnd->writeOwner)
 	{
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		ion_sync_fd(hnd->ion_client, hnd->share_fd);
+		hw_module_t * pmodule = NULL;
+		private_module_t *m=NULL;
+		if (hw_get_module(GRALLOC_HARDWARE_MODULE_ID, (const hw_module_t **)&pmodule) == 0)
+	   	{
+			m = reinterpret_cast<private_module_t *>(pmodule);
+			ion_sync_fd(m->ion_client, hnd->share_fd);
+		}
+		else
+		{
+			AERR("Couldnot get gralloc module for handle 0x%x\n", (unsigned int)handle);
+		}
 #endif
 	}
 	return 0;

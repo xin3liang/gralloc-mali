@@ -35,8 +35,35 @@
 #define GRALLOC_ARM_UMP_MODULE 0
 #define GRALLOC_ARM_DMA_BUF_MODULE 1
 #else
+
+/* NOTE:
+ * If your framebuffer device driver is integrated with UMP, you will have to 
+ * change this IOCTL definition to reflect your integration with the framebuffer 
+ * device.
+ * Expected return value is a UMP secure id backing your framebuffer device memory.
+ */
+
+/*#define IOCTL_GET_FB_UMP_SECURE_ID	_IOR('F', 311, unsigned int)*/
 #define GRALLOC_ARM_UMP_MODULE 1
 #define GRALLOC_ARM_DMA_BUF_MODULE 0
+
+/* NOTE:
+ * If your framebuffer device driver is integrated with dma_buf, you will have to
+ * change this IOCTL definition to reflect your integration with the framebuffer
+ * device.
+ * Expected return value is a structure filled with a file descriptor
+ * backing your framebuffer device memory.
+ */
+#if GRALLOC_ARM_DMA_BUF_MODULE
+struct fb_dmabuf_export 
+{
+	__u32 fd;
+	__u32 flags;
+};
+/*#define FBIOGET_DMABUF	_IOR('F', 0x21, struct fb_dmabuf_export)*/
+#endif /* GRALLOC_ARM_DMA_BUF_MODULE */
+
+
 #endif
 
 #define NUM_FB_BUFFERS 2
@@ -125,7 +152,6 @@ struct private_handle_t
 	int     offset;
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
-	int     ion_client;
 	struct ion_handle *ion_hnd;
 #define GRALLOC_ARM_DMA_BUF_NUM_INTS 2
 #else
@@ -145,6 +171,9 @@ struct private_handle_t
 
 #if GRALLOC_ARM_UMP_MODULE
 	private_handle_t(int flags, int size, int base, int lock_state, ump_secure_id secure_id, ump_handle handle):
+#if GRALLOC_ARM_DMA_BUF_MODULE
+		share_fd(-1),
+#endif
 		magic(sMagic),
 		flags(flags),
 		size(size),
@@ -157,7 +186,7 @@ struct private_handle_t
 		fd(0),
 		offset(0)
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		,ion_client(-1),
+		,
 		ion_hnd(NULL)
 #endif
 
@@ -170,6 +199,7 @@ struct private_handle_t
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
 	private_handle_t(int flags, int size, int base, int lock_state):
+		share_fd(-1),
 		magic(sMagic),
 		flags(flags),
 		size(size),
@@ -183,7 +213,6 @@ struct private_handle_t
 #endif
 		fd(0),
 		offset(0),
-		ion_client(-1),
 		ion_hnd(NULL)
 
 	{
@@ -195,6 +224,9 @@ struct private_handle_t
 #endif
 
 	private_handle_t(int flags, int size, int base, int lock_state, int fb_file, int fb_offset):
+#if GRALLOC_ARM_DMA_BUF_MODULE
+		share_fd(-1),
+#endif
 		magic(sMagic),
 		flags(flags),
 		size(size),
@@ -209,7 +241,7 @@ struct private_handle_t
 		fd(fb_file),
 		offset(fb_offset)
 #if GRALLOC_ARM_DMA_BUF_MODULE
-		,ion_client(-1),
+		,
 		ion_hnd(NULL)
 #endif
 

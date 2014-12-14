@@ -98,11 +98,7 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 			m->base.unlock(&m->base, buffer); 
 			return 0;
 		}
-#if PLATFORM_SDK_VERSION >= 16
-		if (swapInterval == 1 && !(hnd->usage & GRALLOC_USAGE_HW_COMPOSER))
-#else
 		if (swapInterval == 1)
-#endif
 		{
 			// enable VSYNC
 			interrupt = 1;

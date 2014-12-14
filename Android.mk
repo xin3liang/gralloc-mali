@@ -35,15 +35,18 @@ ifneq (,$(wildcard $(MALI_DDK_PATH)/ump/))
 LOCAL_SHARED_LIBRARIES := liblog libcutils libGLESv1_CM libGLES_mali
 
 # All include files are accessed from the DDK root
-LOCAL_C_INCLUDES := $(MALI_DDK_PATH) $(MALI_DDK_PATH)/kernel/drivers/gpu/arm
+DDK_PATH := $(LOCAL_PATH)/../../..
+UMP_HEADERS_PATH := $(DDK_PATH)/kernel/include
+LOCAL_C_INCLUDES := $(DDK_PATH) $(UMP_HEADERS_PATH)
 
 LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc\" -DGRALLOC_16_BITS -DSTANDARD_LINUX_SCREEN
 else
 # Mali-200/300/400MP DDK
-LOCAL_SHARED_LIBRARIES := liblog libcutils libMali libGLESv1_CM libUMP
+SHARED_MEM_LIBS := libUMP #libion
+LOCAL_SHARED_LIBRARIES := liblog libcutils libMali libGLESv1_CM $(SHARED_MEM_LIBS)
 
 # Include the UMP header files
-LOCAL_C_INCLUDES := $(MALI_DDK_PATH)/src/ump/include
+LOCAL_C_INCLUDES := $(MALI_DDK_PATH)/src/ump/include system/core/include/ $(MALI_DDK_PATH)/include 
 
 LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc\" -DGRALLOC_32_BITS -DSTANDARD_LINUX_SCREEN
 endif

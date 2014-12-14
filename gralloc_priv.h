@@ -23,6 +23,8 @@
 #include <pthread.h>
 #include <errno.h>
 #include <linux/fb.h>
+#include <sys/types.h>
+#include <unistd.h>
 
 #include <hardware/gralloc.h>
 #include <cutils/native_handle.h>
@@ -55,6 +57,9 @@ struct private_module_t
 		// flag to indicate we'll post this buffer
 		PRIV_USAGE_LOCKED_FOR_POST = 0x80000000
 	};
+
+	/* default constructor */
+	private_module_t();
 };
 
 #ifdef __cplusplus

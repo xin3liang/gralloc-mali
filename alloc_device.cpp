@@ -33,6 +33,54 @@
 #include <ump/ump.h>
 #include <ump/ump_ref_drv.h>
 
+#if GRALLOC_SIMULATE_FAILURES
+#include <cutils/properties.h>
+
+/* system property keys for controlling simulated UMP allocation failures */
+#define PROP_MALI_TEST_GRALLOC_FAIL_FIRST     "mali.test.gralloc.fail_first"
+#define PROP_MALI_TEST_GRALLOC_FAIL_INTERVAL  "mali.test.gralloc.fail_interval"
+
+static int __ump_alloc_should_fail()
+{
+
+	static unsigned int call_count  = 0;
+	unsigned int        first_fail  = 0;
+	int                 fail_period = 0;
+	int                 fail        = 0;
+	
+	++call_count;
+
+	/* read the system properties that control failure simulation */	
+	{
+		char prop_value[PROPERTY_VALUE_MAX];
+		
+		if (property_get(PROP_MALI_TEST_GRALLOC_FAIL_FIRST, prop_value, "0") > 0)
+		{
+			sscanf(prop_value, "%u", &first_fail);
+		}
+
+		if (property_get(PROP_MALI_TEST_GRALLOC_FAIL_INTERVAL, prop_value, "0") > 0)
+		{
+			sscanf(prop_value, "%u", &fail_period);
+		}
+	}
+
+	/* failure simulation is enabled by setting the first_fail property to non-zero */
+	if (first_fail > 0)
+	{
+		LOGI("iteration %u (fail=%u, period=%u)\n", call_count, first_fail, fail_period);
+		
+		fail = 	(call_count == first_fail) ||
+				(call_count > first_fail && fail_period > 0 && 0 == (call_count - first_fail) % fail_period);
+		
+		if (fail) 
+		{
+			LOGE("failed ump_ref_drv_allocate on iteration #%d\n", call_count);
+		}
+	}
+	return fail;
+}
+#endif
 
 
 static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buffer_handle_t* pHandle)
@@ -53,6 +101,14 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 		constraints = UMP_REF_DRV_CONSTRAINT_NONE;
 	}
 
+#ifdef GRALLOC_SIMULATE_FAILURES
+	/* if the failure condition matches, fail this iteration */
+	if (__ump_alloc_should_fail())
+	{
+		ump_mem_handle = UMP_INVALID_MEMORY_HANDLE;
+	}
+	else
+#endif
 	ump_mem_handle = ump_ref_drv_allocate(size, constraints);
 	if (UMP_INVALID_MEMORY_HANDLE != ump_mem_handle)
 	{
@@ -90,7 +146,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 	}
 	else
 	{
-		LOGE("gralloc_alloc_buffer() failed to allcoate UMP memory");
+		LOGE("gralloc_alloc_buffer() failed to allocate UMP memory");
 	}
 
 	return -1;

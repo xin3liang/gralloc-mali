@@ -191,7 +191,7 @@ static int gralloc_unlock(gralloc_module_t const* module, buffer_handle_t handle
 
 	if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_UMP && hnd->writeOwner)
 	{
-		ump_cpu_msync_now((ump_handle)hnd->ump_mem_handle, UMP_MSYNC_CLEAN_AND_INVALIDATE, NULL, 0);
+		ump_cpu_msync_now((ump_handle)hnd->ump_mem_handle, UMP_MSYNC_CLEAN_AND_INVALIDATE, (void*)hnd->base, hnd->size);
 	}
 	return 0;
 }
@@ -203,33 +203,45 @@ static struct hw_module_methods_t gralloc_module_methods =
 	open: gralloc_device_open
 };
 
-struct private_module_t HAL_MODULE_INFO_SYM =
+private_module_t::private_module_t()
 {
-	base:
-	{
-		common:
-		{
-			tag: HARDWARE_MODULE_TAG,
-			version_major: 1,
-			version_minor: 0,
-			id: GRALLOC_HARDWARE_MODULE_ID,
-			name: "Graphics Memory Allocator Module",
-			author: "ARM Ltd.",
-			methods: &gralloc_module_methods,
-			dso: NULL,
-			reserved : {0,},
-		},
-		registerBuffer: gralloc_register_buffer,
-		unregisterBuffer: gralloc_unregister_buffer,
-		lock: gralloc_lock,
-		unlock: gralloc_unlock,
-		perform: NULL,
-		reserved_proc: {0,},
-	},
-	framebuffer: NULL,
-	flags: 0,
-	numBuffers: 0,
-	bufferMask: 0,
-	lock: PTHREAD_MUTEX_INITIALIZER,
-	currentBuffer: NULL,
+#define INIT_ZERO(obj) (memset(&(obj),0,sizeof((obj))))
+
+	base.common.tag = HARDWARE_MODULE_TAG;
+	base.common.version_major = 1;
+	base.common.version_minor = 0;
+	base.common.id = GRALLOC_HARDWARE_MODULE_ID;
+	base.common.name = "Graphics Memory Allocator Module";
+	base.common.author = "ARM Ltd.";
+	base.common.methods = &gralloc_module_methods;
+	base.common.dso = NULL;
+	INIT_ZERO(base.common.reserved);
+
+	base.registerBuffer = gralloc_register_buffer;
+	base.unregisterBuffer = gralloc_unregister_buffer;
+	base.lock = gralloc_lock;
+	base.unlock = gralloc_unlock;
+	base.perform = NULL;
+	INIT_ZERO(base.reserved_proc);
+
+	framebuffer = NULL;
+	flags = 0;
+	numBuffers = 0;
+	bufferMask = 0;
+	pthread_mutex_init(&(lock), NULL);
+	currentBuffer = NULL;
+	INIT_ZERO(info);
+	INIT_ZERO(finfo);
+	xdpi = 0.0f; 
+	ydpi = 0.0f; 
+	fps = 0.0f; 
+
+#undef INIT_ZERO
 };
+
+/*
+ * HAL_MODULE_INFO_SYM will be initialized using the default constructor
+ * implemented above
+ */ 
+struct private_module_t HAL_MODULE_INFO_SYM;
+

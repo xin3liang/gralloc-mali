@@ -45,11 +45,11 @@ static int gralloc_device_open(const hw_module_t *module, const char *name, hw_d
 {
 	int status = -EINVAL;
 
-	if (!strcmp(name, GRALLOC_HARDWARE_GPU0))
+	if (!strncmp(name, GRALLOC_HARDWARE_GPU0, MALI_GRALLOC_HARDWARE_MAX_STR_LEN))
 	{
 		status = alloc_device_open(module, name, device);
 	}
-	else if (!strcmp(name, GRALLOC_HARDWARE_FB0))
+	else if (!strncmp(name, GRALLOC_HARDWARE_FB0, MALI_GRALLOC_HARDWARE_MAX_STR_LEN))
 	{
 		status = framebuffer_device_open(module, name, device);
 	}

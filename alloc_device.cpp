@@ -68,12 +68,12 @@ static int __ump_alloc_should_fail()
 
 		if (property_get(PROP_MALI_TEST_GRALLOC_FAIL_FIRST, prop_value, "0") > 0)
 		{
-			sscanf(prop_value, "%u", &first_fail);
+			sscanf(prop_value, "%11u", &first_fail);
 		}
 
 		if (property_get(PROP_MALI_TEST_GRALLOC_FAIL_INTERVAL, prop_value, "0") > 0)
 		{
-			sscanf(prop_value, "%u", &fail_period);
+			sscanf(prop_value, "%11u", &fail_period);
 		}
 	}
 
@@ -393,7 +393,7 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 				break;
 
 			case HAL_PIXEL_FORMAT_RGB_565:
-#if PLATFORM_SDK_VERSION < 18
+#if PLATFORM_SDK_VERSION < 19
 			case HAL_PIXEL_FORMAT_RGBA_5551:
 			case HAL_PIXEL_FORMAT_RGBA_4444:
 #endif
@@ -432,7 +432,11 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 	/* match the framebuffer format */
 	if (usage & GRALLOC_USAGE_HW_FB)
 	{
+#ifdef GRALLOC_16_BITS
+		format = HAL_PIXEL_FORMAT_RGB_565;
+#else
 		format = HAL_PIXEL_FORMAT_BGRA_8888;
+#endif
 	}
 
 	private_handle_t *hnd = (private_handle_t *)*pHandle;

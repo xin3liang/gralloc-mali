@@ -44,8 +44,8 @@
  */
 
 /*#define IOCTL_GET_FB_UMP_SECURE_ID    _IOR('F', 311, unsigned int)*/
-#define GRALLOC_ARM_UMP_MODULE 1
-#define GRALLOC_ARM_DMA_BUF_MODULE 0
+#define GRALLOC_ARM_UMP_MODULE 0
+#define GRALLOC_ARM_DMA_BUF_MODULE 1
 
 /* NOTE:
  * If your framebuffer device driver is integrated with dma_buf, you will have to
@@ -66,6 +66,10 @@ struct fb_dmabuf_export
 
 #endif
 
+/* the max string size of GRALLOC_HARDWARE_GPU0 & GRALLOC_HARDWARE_FB0
+ * 8 is big enough for "gpu0" & "fb0" currently
+ */
+#define MALI_GRALLOC_HARDWARE_MAX_STR_LEN 8
 #define NUM_FB_BUFFERS 2
 
 #if GRALLOC_ARM_UMP_MODULE

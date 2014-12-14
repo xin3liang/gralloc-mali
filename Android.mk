@@ -23,10 +23,10 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE := false
 LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw
-LOCAL_SHARED_LIBRARIES := liblog libcutils libMali libGLESv1_CM
+LOCAL_SHARED_LIBRARIES := liblog libcutils libMali libGLESv1_CM libUMP
 
 # Include the UMP header files
-LOCAL_C_INCLUDES := hardware/arm/mali/include
+LOCAL_C_INCLUDES := hardware/arm/mali/src/ump/include
 
 LOCAL_SRC_FILES := \
 	gralloc_module.cpp \
@@ -35,4 +35,5 @@ LOCAL_SRC_FILES := \
 
 LOCAL_MODULE := gralloc.default
 LOCAL_CFLAGS:= -DLOG_TAG=\"gralloc\" -DGRALLOC_32_BITS -DSTANDARD_LINUX_SCREEN
+#LOCAL_CFLAGS+= -DMALI_VSYNC_EVENT_REPORT_ENABLE
 include $(BUILD_SHARED_LIBRARY)

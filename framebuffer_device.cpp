@@ -29,6 +29,10 @@
 
 #include <GLES/gl.h>
 
+#ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
+#include "gralloc_vsync_report.h"
+#endif
+
 #include "gralloc_priv.h"
 #include "gralloc_helper.h"
 
@@ -73,11 +77,13 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 				0, 0, m->info.xres, m->info.yres, NULL);
 
 		const size_t offset = hnd->base - m->framebuffer->base;
+                int interrupt;
 		m->info.activate = FB_ACTIVATE_VBL;
 		m->info.yoffset = offset / m->finfo.line_length;
 
 #ifdef STANDARD_LINUX_SCREEN
 #define FBIO_WAITFORVSYNC       _IOW('F', 0x20, __u32)
+#define S3CFB_SET_VSYNC_INT	_IOW('F', 206, unsigned int)
 		if (ioctl(m->framebuffer->fd, FBIOPAN_DISPLAY, &m->info) == -1) 
 		{
 			LOGE("FBIOPAN_DISPLAY failed");
@@ -85,20 +91,52 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 			return 0;
 		}
 
-		// wait for VSYNC
-		if(ioctl(m->framebuffer->fd, FBIO_WAITFORVSYNC, 0) < 0)
+                // enable VSYNC
+                interrupt = 1;
+                if(ioctl(m->framebuffer->fd, S3CFB_SET_VSYNC_INT, &interrupt) < 0) 
 		{
-			LOGE("FBIO_WAITFORVSYNC failed");
-			return 0;
-		}
+                    LOGE("S3CFB_SET_VSYNC_INT enable failed");
+                    return 0;
+                }
+                // wait for VSYNC
+#ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
+		gralloc_mali_vsync_report(MALI_VSYNC_EVENT_BEGIN_WAIT);
+#endif
+                if(ioctl(m->framebuffer->fd, FBIO_WAITFORVSYNC, 0) < 0) 
+		{
+                    LOGE("FBIO_WAITFORVSYNC failed");
+#ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
+			gralloc_mali_vsync_report(MALI_VSYNC_EVENT_END_WAIT);
+#endif
+                    return 0;
+                }
+#ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
+		gralloc_mali_vsync_report(MALI_VSYNC_EVENT_END_WAIT);
+#endif
+                // disable VSYNC
+                interrupt = 0;
+                if(ioctl(m->framebuffer->fd, S3CFB_SET_VSYNC_INT, &interrupt) < 0) 
+		{
+                    LOGE("S3CFB_SET_VSYNC_INT disable failed");
+                    return 0;
+                }
 #else 
 		/*Standard Android way*/
+#ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
+		gralloc_mali_vsync_report(MALI_VSYNC_EVENT_BEGIN_WAIT);
+#endif
 		if (ioctl(m->framebuffer->fd, FBIOPUT_VSCREENINFO, &m->info) == -1) 
 		{
 			LOGE("FBIOPUT_VSCREENINFO failed");
+#ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
+			gralloc_mali_vsync_report(MALI_VSYNC_EVENT_END_WAIT);
+#endif
 			m->base.unlock(&m->base, buffer); 
 			return -errno;
 		}
+#ifdef MALI_VSYNC_EVENT_REPORT_ENABLE
+		gralloc_mali_vsync_report(MALI_VSYNC_EVENT_END_WAIT);
+#endif
 #endif
 
 		m->currentBuffer = buffer;

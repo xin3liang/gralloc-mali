@@ -69,7 +69,7 @@ static int gralloc_register_buffer(gralloc_module_t const* module, buffer_handle
 
 	if (!s_ump_is_open)
 	{
-		ump_result res = ump_open(); // TODO: Fix a ump_close() somewhere???
+		ump_result res = ump_open();
 		if (res != UMP_OK)
 		{
 			pthread_mutex_unlock(&s_map_lock);

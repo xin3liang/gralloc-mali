@@ -65,7 +65,7 @@ struct private_handle_t
 {
 	struct native_handle nativeHandle;
 #endif
-    
+
 	enum
 	{
 		PRIV_FLAGS_FRAMEBUFFER = 0x00000001,
@@ -101,7 +101,7 @@ struct private_handle_t
 	static const int sNumInts = 11;
 	static const int sNumFds = 0;
 	static const int sMagic = 0x3141592;
-   
+
 	private_handle_t(int flags, int size, int base, int lock_state, ump_secure_id secure_id, ump_handle handle):
 		magic(sMagic),
 		flags(flags),
@@ -111,7 +111,7 @@ struct private_handle_t
 		writeOwner(0),
 		pid(getpid()),
 		ump_id((int)secure_id),
-		ump_mem_handle((int)handle), 
+		ump_mem_handle((int)handle),
 		fd(0),
 		offset(0)
 	{
@@ -129,7 +129,7 @@ struct private_handle_t
 		writeOwner(0),
 		pid(getpid()),
 		ump_id((int)UMP_INVALID_SECURE_ID),
-		ump_mem_handle((int)UMP_INVALID_MEMORY_HANDLE), 
+		ump_mem_handle((int)UMP_INVALID_MEMORY_HANDLE),
 		fd(fb_file),
 		offset(fb_offset)
 	{
@@ -151,7 +151,7 @@ struct private_handle_t
 	static int validate(const native_handle* h)
 	{
 		const private_handle_t* hnd = (const private_handle_t*)h;
-		if (!h || h->version != sizeof(native_handle) || h->numInts != sNumInts || h->numFds != sNumFds || hnd->magic != sMagic) 
+		if (!h || h->version != sizeof(native_handle) || h->numInts != sNumInts || h->numFds != sNumFds || hnd->magic != sMagic)
 		{
 			return -EINVAL;
 		}

@@ -40,20 +40,26 @@
 // numbers of buffers for page flipping
 #define NUM_BUFFERS NUM_FB_BUFFERS 
 
+static int swapInterval = 1;
+
 enum
 {
 	PAGE_FLIP = 0x00000001,
 };
 
-
 static int fb_set_swap_interval(struct framebuffer_device_t* dev, int interval)
 {
-	if (interval < dev->minSwapInterval || interval > dev->maxSwapInterval)
+	if (interval < dev->minSwapInterval)
 	{
-		return -EINVAL;
+		interval = dev->minSwapInterval;
+	}
+	else if (interval > dev->maxSwapInterval)
+	{
+		interval = dev->maxSwapInterval;
 	}
 
-	// Currently not implemented
+	swapInterval = interval;
+
 	return 0;
 }
 
@@ -92,7 +98,11 @@ static int fb_post(struct framebuffer_device_t* dev, buffer_handle_t buffer)
 			m->base.unlock(&m->base, buffer); 
 			return 0;
 		}
-
+#if PLATFORM_SDK_VERSION >= 16
+		if (swapInterval == 1 && !(hnd->usage & GRALLOC_USAGE_HW_COMPOSER))
+#else
+		if (swapInterval == 1)
+#endif
 		{
 			// enable VSYNC
 			interrupt = 1;
@@ -360,7 +370,7 @@ int init_frame_buffer_locked(struct private_module_t* module)
 	memset(vaddr, 0, fbSize);
 
 	// Create a "fake" buffer object for the entire frame buffer memory, and store it in the module
-	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, fbSize, intptr_t(vaddr),
+	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, 0, fbSize, intptr_t(vaddr),
 	                                           0, dup(fd), 0);
 
 	module->numBuffers = info.yres_virtual / info.yres;
@@ -465,7 +475,7 @@ int framebuffer_device_open(hw_module_t const* module, const char* name, hw_devi
 	const_cast<float&>(dev->xdpi) = m->xdpi;
 	const_cast<float&>(dev->ydpi) = m->ydpi;
 	const_cast<float&>(dev->fps) = m->fps;
-	const_cast<int&>(dev->minSwapInterval) = 1;
+	const_cast<int&>(dev->minSwapInterval) = 0;
 	const_cast<int&>(dev->maxSwapInterval) = 1;
 	*device = &dev->common;
 	status = 0;

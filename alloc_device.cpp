@@ -129,7 +129,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 			return -1;
 		}
 
-		private_handle_t *hnd = new private_handle_t( private_handle_t::PRIV_FLAGS_USES_ION, size, (int)cpu_ptr, private_handle_t::LOCK_STATE_MAPPED );
+		private_handle_t *hnd = new private_handle_t( private_handle_t::PRIV_FLAGS_USES_ION, usage, size, (int)cpu_ptr, private_handle_t::LOCK_STATE_MAPPED );
 
 		if ( NULL != hnd )
 		{
@@ -189,7 +189,7 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 					ump_id = ump_secure_id_get(ump_mem_handle);
 					if (UMP_INVALID_SECURE_ID != ump_id)
 					{
-						private_handle_t* hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP, size, (int)cpu_ptr,
+						private_handle_t* hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP, usage, size, (int)cpu_ptr,
 																	 private_handle_t::LOCK_STATE_MAPPED, ump_id, ump_mem_handle);
 						if (NULL != hnd)
 						{
@@ -273,7 +273,7 @@ static int gralloc_alloc_framebuffer_locked(alloc_device_t* dev, size_t size, in
 	}
 
 	// The entire framebuffer memory is already mapped, now create a buffer object for parts of this memory
-	private_handle_t* hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, size, vaddr,
+	private_handle_t* hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, usage, size, vaddr,
 	                                             0, dup(m->framebuffer->fd), vaddr - m->framebuffer->base);
 #if GRALLOC_ARM_UMP_MODULE
 	hnd->ump_id = m->framebuffer->ump_id;
@@ -415,8 +415,12 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 	else if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_UMP)
 	{
 #if GRALLOC_ARM_UMP_MODULE
-		ump_mapped_pointer_release((ump_handle)hnd->ump_mem_handle);
-		ump_reference_release((ump_handle)hnd->ump_mem_handle);
+		/* Buffer might be unregistered so we need to check for invalid ump handle*/
+		if ( (int)UMP_INVALID_MEMORY_HANDLE != hnd->ump_mem_handle )
+		{
+			ump_mapped_pointer_release((ump_handle)hnd->ump_mem_handle);
+			ump_reference_release((ump_handle)hnd->ump_mem_handle);
+		}
 #else
 		AERR( "Can't free ump memory for handle:0x%x. Not supported.", (unsigned int)hnd );
 #endif
@@ -425,7 +429,11 @@ static int alloc_device_free(alloc_device_t* dev, buffer_handle_t handle)
 	{
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		private_module_t* m = reinterpret_cast<private_module_t*>(dev->common.module);
-		if ( 0 != munmap( (void*)hnd->base, hnd->size ) ) AERR( "Failed to munmap handle 0x%x", (unsigned int)hnd );
+		/* Buffer might be unregistered so we need to check for invalid ump handle*/
+		if ( 0 != hnd->base )
+		{
+			if ( 0 != munmap( (void*)hnd->base, hnd->size ) ) AERR( "Failed to munmap handle 0x%x", (unsigned int)hnd );
+		}
 		close( hnd->share_fd );
 		if ( 0 != ion_free( m->ion_client, hnd->ion_hnd ) ) AERR( "Failed to ion_free( ion_client: %d ion_hnd: %p )", m->ion_client, hnd->ion_hnd );
 		memset( (void*)hnd, 0, sizeof( *hnd ) );

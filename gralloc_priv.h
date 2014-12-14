@@ -132,6 +132,7 @@ struct private_handle_t
 #endif
 	int     magic;
 	int     flags;
+	int 	usage;
 	int     size;
 	int     base;
 	int     lockState;
@@ -165,17 +166,18 @@ struct private_handle_t
 #endif
 
 #ifdef __cplusplus
-	static const int sNumInts = 9 + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
+	static const int sNumInts = 10 + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
 	static const int sNumFds = GRALLOC_ARM_NUM_FDS;
 	static const int sMagic = 0x3141592;
 
 #if GRALLOC_ARM_UMP_MODULE
-	private_handle_t(int flags, int size, int base, int lock_state, ump_secure_id secure_id, ump_handle handle):
+	private_handle_t(int flags, int usage, int size, int base, int lock_state, ump_secure_id secure_id, ump_handle handle):
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		share_fd(-1),
 #endif
 		magic(sMagic),
 		flags(flags),
+		usage(usage),
 		size(size),
 		base(base),
 		lockState(lock_state),
@@ -198,10 +200,11 @@ struct private_handle_t
 #endif
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
-	private_handle_t(int flags, int size, int base, int lock_state):
+	private_handle_t(int flags, int usage, int size, int base, int lock_state):
 		share_fd(-1),
 		magic(sMagic),
 		flags(flags),
+		usage(usage),
 		size(size),
 		base(base),
 		lockState(lock_state),
@@ -223,12 +226,13 @@ struct private_handle_t
 
 #endif
 
-	private_handle_t(int flags, int size, int base, int lock_state, int fb_file, int fb_offset):
+	private_handle_t(int flags, int usage, int size, int base, int lock_state, int fb_file, int fb_offset):
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		share_fd(-1),
 #endif
 		magic(sMagic),
 		flags(flags),
+		usage(usage),
 		size(size),
 		base(base),
 		lockState(lock_state),

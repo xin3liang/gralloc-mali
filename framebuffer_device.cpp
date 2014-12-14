@@ -400,7 +400,7 @@ int framebuffer_device_open(hw_module_t const* module, const char* name, hw_devi
 #ifdef GRALLOC_16_BITS
 	const_cast<int&>(dev->format) = HAL_PIXEL_FORMAT_RGB_565;
 #else
-	const_cast<int&>(dev->format) = HAL_PIXEL_FORMAT_RGBA_8888;
+	const_cast<int&>(dev->format) = HAL_PIXEL_FORMAT_BGRA_8888;
 #endif
 	const_cast<float&>(dev->xdpi) = m->xdpi;
 	const_cast<float&>(dev->ydpi) = m->ydpi;

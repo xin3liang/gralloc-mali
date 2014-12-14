@@ -44,7 +44,14 @@ static int gralloc_alloc_buffer(alloc_device_t* dev, size_t size, int usage, buf
 
 	size = round_up_to_page_size(size);
 
-	constraints = UMP_REF_DRV_CONSTRAINT_USE_CACHE;
+	if( (usage&GRALLOC_USAGE_SW_READ_MASK) == GRALLOC_USAGE_SW_READ_OFTEN )
+	{
+		constraints =  UMP_REF_DRV_CONSTRAINT_USE_CACHE;
+	}
+	else
+	{
+		constraints = UMP_REF_DRV_CONSTRAINT_NONE;
+	}
 
 	ump_mem_handle = ump_ref_drv_allocate(size, constraints);
 	if (UMP_INVALID_MEMORY_HANDLE != ump_mem_handle)

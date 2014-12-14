@@ -46,7 +46,7 @@ else
 MALI_DDK_PATH := hardware/arm/mali
 #SHARED_MEM_LIBS := libUMP
 SHARED_MEM_LIBS := libion libhardware
-LOCAL_SHARED_LIBRARIES := liblog libcutils libMali libGLESv1_CM $(SHARED_MEM_LIBS)
+LOCAL_SHARED_LIBRARIES := liblog libcutils libGLESv1_CM $(SHARED_MEM_LIBS)
 
 LOCAL_C_INCLUDES := system/core/include/ $(MALI_DDK_PATH)/include 
 # Include the UMP header files

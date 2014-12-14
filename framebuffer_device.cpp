@@ -85,7 +85,7 @@ static int fb_post(struct framebuffer_device_t *dev, buffer_handle_t buffer)
 		m->base.lock(&m->base, buffer, private_module_t::PRIV_USAGE_LOCKED_FOR_POST,
 		             0, 0, m->info.xres, m->info.yres, NULL);
 
-		const size_t offset = hnd->base - m->framebuffer->base;
+		const size_t offset = (uintptr_t)hnd->base - (uintptr_t)m->framebuffer->base;
 		int interrupt;
 		m->info.activate = FB_ACTIVATE_VBL;
 		m->info.yoffset = offset / m->finfo.line_length;
@@ -108,7 +108,7 @@ static int fb_post(struct framebuffer_device_t *dev, buffer_handle_t buffer)
 
 			if (ioctl(m->framebuffer->fd, S3CFB_SET_VSYNC_INT, &interrupt) < 0)
 			{
-				AERR("S3CFB_SET_VSYNC_INT enable failed for fd: %d", m->framebuffer->fd);
+				//      AERR("S3CFB_SET_VSYNC_INT enable failed for fd: %d", m->framebuffer->fd);
 				return 0;
 			}
 
@@ -382,7 +382,7 @@ int init_frame_buffer_locked(struct private_module_t *module)
 	memset(vaddr, 0, fbSize);
 
 	// Create a "fake" buffer object for the entire frame buffer memory, and store it in the module
-	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, 0, fbSize, intptr_t(vaddr),
+	module->framebuffer = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, 0, fbSize, vaddr,
 	        0, dup(fd), 0);
 
 	module->numBuffers = info.yres_virtual / info.yres;

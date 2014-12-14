@@ -151,7 +151,7 @@ struct private_handle_t
 	int     height;
 	int     format;
 	int     stride;
-	int     base;
+	void    *base;
 	int     lockState;
 	int     writeOwner;
 	int     pid;
@@ -196,7 +196,7 @@ struct private_handle_t
 	static const int sMagic = 0x3141592;
 
 #if GRALLOC_ARM_UMP_MODULE
-	private_handle_t(int flags, int usage, int size, int base, int lock_state, ump_secure_id secure_id, ump_handle handle):
+	private_handle_t(int flags, int usage, int size, void *base, int lock_state, ump_secure_id secure_id, ump_handle handle):
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		share_fd(-1),
 #endif
@@ -230,7 +230,7 @@ struct private_handle_t
 #endif
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
-	private_handle_t(int flags, int usage, int size, int base, int lock_state):
+	private_handle_t(int flags, int usage, int size, void *base, int lock_state):
 		share_fd(-1),
 		magic(sMagic),
 		flags(flags),
@@ -261,7 +261,7 @@ struct private_handle_t
 
 #endif
 
-	private_handle_t(int flags, int usage, int size, int base, int lock_state, int fb_file, int fb_offset):
+	private_handle_t(int flags, int usage, int size, void *base, int lock_state, int fb_file, int fb_offset):
 #if GRALLOC_ARM_DMA_BUF_MODULE
 		share_fd(-1),
 #endif

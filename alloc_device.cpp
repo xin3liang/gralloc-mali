@@ -106,7 +106,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 		int shared_fd;
 		int ret;
 
-		ret = ion_alloc(m->ion_client, size, 0, ION_HEAP_SYSTEM_MASK, 0, &ion_hnd);
+		ret = ion_alloc(m->ion_client, size, 0, ION_HEAP_SYSTEM_MASK, 0, &(ion_hnd));
 
 		if (ret != 0)
 		{
@@ -143,7 +143,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 			return -1;
 		}
 
-		private_handle_t *hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_USES_ION, usage, size, (int)cpu_ptr, private_handle_t::LOCK_STATE_MAPPED);
+		private_handle_t *hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_USES_ION, usage, size, cpu_ptr, private_handle_t::LOCK_STATE_MAPPED);
 
 		if (NULL != hnd)
 		{
@@ -215,7 +215,7 @@ static int gralloc_alloc_buffer(alloc_device_t *dev, size_t size, int usage, buf
 
 					if (UMP_INVALID_SECURE_ID != ump_id)
 					{
-						private_handle_t *hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP, usage, size, (int)cpu_ptr,
+						private_handle_t *hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_USES_UMP, usage, size, cpu_ptr,
 						private_handle_t::LOCK_STATE_MAPPED, ump_id, ump_mem_handle);
 
 						if (NULL != hnd)
@@ -289,7 +289,7 @@ static int gralloc_alloc_framebuffer_locked(alloc_device_t *dev, size_t size, in
 		return -ENOMEM;
 	}
 
-	int vaddr = m->framebuffer->base;
+	void *vaddr = m->framebuffer->base;
 
 	// find a free slot
 	for (uint32_t i = 0 ; i < numBuffers ; i++)
@@ -300,12 +300,12 @@ static int gralloc_alloc_framebuffer_locked(alloc_device_t *dev, size_t size, in
 			break;
 		}
 
-		vaddr += bufferSize;
+		vaddr = (void *)((uintptr_t)vaddr + bufferSize);
 	}
 
 	// The entire framebuffer memory is already mapped, now create a buffer object for parts of this memory
 	private_handle_t *hnd = new private_handle_t(private_handle_t::PRIV_FLAGS_FRAMEBUFFER, usage, size, vaddr,
-	        0, dup(m->framebuffer->fd), vaddr - m->framebuffer->base);
+	        0, dup(m->framebuffer->fd), (uintptr_t)vaddr - (uintptr_t) m->framebuffer->base);
 #if GRALLOC_ARM_UMP_MODULE
 	hnd->ump_id = m->framebuffer->ump_id;
 
@@ -361,17 +361,35 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 	size_t size;
 	size_t stride;
 
-	if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12)
+	if (format == HAL_PIXEL_FORMAT_YCrCb_420_SP || format == HAL_PIXEL_FORMAT_YV12
+	/* HAL_PIXEL_FORMAT_YCbCr_420_SP, HAL_PIXEL_FORMAT_YCbCr_420_P, HAL_PIXEL_FORMAT_YCbCr_422_I are not defined in Android.
+ 	 * To enable Mali DDK EGLImage support for those formats, firstly, you have to add them in Android system/core/include/system/graphics.h.
+ 	 * Then, define SUPPORT_LEGACY_FORMAT in the same header file(Mali DDK will also check this definition).
+	 */
+#ifdef SUPPORT_LEGACY_FORMAT 
+		|| format == HAL_PIXEL_FORMAT_YCbCr_420_SP || format == HAL_PIXEL_FORMAT_YCbCr_420_P || format == HAL_PIXEL_FORMAT_YCbCr_422_I
+#endif
+	)
 	{
 		switch (format)
 		{
 			case HAL_PIXEL_FORMAT_YCrCb_420_SP:
 			case HAL_PIXEL_FORMAT_YV12:
+#ifdef SUPPORT_LEGACY_FORMAT
+			case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+			case HAL_PIXEL_FORMAT_YCbCr_420_P:
+#endif
 				stride = GRALLOC_ALIGN(w, 16);
 				size = h * (stride + GRALLOC_ALIGN(stride / 2, 16));
 
 				break;
+#ifdef SUPPORT_LEGACY_FORMAT
+			case HAL_PIXEL_FORMAT_YCbCr_422_I:
+				stride = GRALLOC_ALIGN(w, 16);
+				size = h * stride * 2;
 
+                               break;
+#endif
 			default:
 				return -EINVAL;
 		}
@@ -485,7 +503,7 @@ static int alloc_device_free(alloc_device_t *dev, buffer_handle_t handle)
 		// free this buffer
 		private_module_t *m = reinterpret_cast<private_module_t *>(dev->common.module);
 		const size_t bufferSize = m->finfo.line_length * m->info.yres;
-		int index = (hnd->base - m->framebuffer->base) / bufferSize;
+		int index = ((uintptr_t)hnd->base - (uintptr_t)m->framebuffer->base) / bufferSize;
 		m->bufferMask &= ~(1 << index);
 		close(hnd->fd);
 
@@ -510,7 +528,7 @@ static int alloc_device_free(alloc_device_t *dev, buffer_handle_t handle)
 		}
 
 #else
-		AERR("Can't free ump memory for handle:0x%x. Not supported.", (unsigned int)hnd);
+		AERR("Can't free ump memory for handle:0x%p. Not supported.", hnd);
 #endif
 	}
 	else if (hnd->flags & private_handle_t::PRIV_FLAGS_USES_ION)
@@ -523,7 +541,7 @@ static int alloc_device_free(alloc_device_t *dev, buffer_handle_t handle)
 		{
 			if (0 != munmap((void *)hnd->base, hnd->size))
 			{
-				AERR("Failed to munmap handle 0x%x", (unsigned int)hnd);
+				AERR("Failed to munmap handle 0x%p", hnd);
 			}
 		}
 

@@ -23,7 +23,7 @@ LOCAL_PATH := $(call my-dir)
 include $(CLEAR_VARS)
 LOCAL_PRELINK_MODULE := false
 
-ifeq ($(PLATFORM_SDK_VERSION),21)
+ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 21 && echo OK),OK)
 	LOCAL_MODULE_RELATIVE_PATH := hw
 else
 	LOCAL_MODULE_PATH := $(TARGET_OUT_SHARED_LIBRARIES)/hw

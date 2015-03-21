@@ -377,16 +377,24 @@ static int alloc_device_alloc(alloc_device_t *dev, int w, int h, int format, int
 		switch (format)
 		{
 			case HAL_PIXEL_FORMAT_YCrCb_420_SP:
+				stride = GRALLOC_ALIGN(w, 16);
+				size = GRALLOC_ALIGN(h, 16) * (stride + GRALLOC_ALIGN(stride / 2, 16));
+				break;
+
 			case HAL_PIXEL_FORMAT_YV12:
 #ifdef SUPPORT_LEGACY_FORMAT
-			case HAL_PIXEL_FORMAT_YCbCr_420_SP:
 			case HAL_PIXEL_FORMAT_YCbCr_420_P:
 #endif
 				stride = GRALLOC_ALIGN(w, 16);
-				size = h * (stride + GRALLOC_ALIGN(stride / 2, 16));
+				size = GRALLOC_ALIGN(h, 2) * (stride + GRALLOC_ALIGN(stride / 2, 16));
 
 				break;
 #ifdef SUPPORT_LEGACY_FORMAT
+
+			case HAL_PIXEL_FORMAT_YCbCr_420_SP:
+				stride = GRALLOC_ALIGN(w, 16);
+				size = GRALLOC_ALIGN(h, 16) * (stride + GRALLOC_ALIGN(stride / 2, 16));
+				break;
 
 			case HAL_PIXEL_FORMAT_YCbCr_422_I:
 				stride = GRALLOC_ALIGN(w, 16);

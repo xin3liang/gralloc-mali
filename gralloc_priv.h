@@ -163,7 +163,11 @@ struct private_handle_t
 	int     height;
 	int     format;
 	int     stride;
-	void    *base;
+	union
+	{
+		void   *base;
+		uint64_t padding;
+	};
 	int     lockState;
 	int     writeOwner;
 	int     pid;
@@ -174,9 +178,6 @@ struct private_handle_t
 #if GRALLOC_ARM_UMP_MODULE
 	int     ump_id;
 	int     ump_mem_handle;
-#define GRALLOC_ARM_UMP_NUM_INTS 2
-#else
-#define GRALLOC_ARM_UMP_NUM_INTS 0
 #endif
 
 	// Following members is for framebuffer only
@@ -185,9 +186,6 @@ struct private_handle_t
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
 	ion_user_handle_t ion_hnd;
-#define GRALLOC_ARM_DMA_BUF_NUM_INTS 2
-#else
-#define GRALLOC_ARM_DMA_BUF_NUM_INTS 0
 #endif
 
 #if GRALLOC_ARM_DMA_BUF_MODULE
@@ -197,13 +195,6 @@ struct private_handle_t
 #endif
 
 #ifdef __cplusplus
-	/*
-	 * We track the number of integers in the structure. There are 11 unconditional
-	 * integers (magic - pid, yuv_info, fd and offset). The GRALLOC_ARM_XXX_NUM_INTS
-	 * variables are used to track the number of integers that are conditionally
-	 * included.
-	 */
-	static const int sNumInts = 15 + GRALLOC_ARM_UMP_NUM_INTS + GRALLOC_ARM_DMA_BUF_NUM_INTS;
 	static const int sNumFds = GRALLOC_ARM_NUM_FDS;
 	static const int sMagic = 0x3141592;
 
@@ -237,7 +228,7 @@ struct private_handle_t
 	{
 		version = sizeof(native_handle);
 		numFds = sNumFds;
-		numInts = sNumInts;
+		numInts = (sizeof(private_handle_t) - sizeof(native_handle)) / sizeof(int) - sNumFds;
 	}
 #endif
 
@@ -268,7 +259,7 @@ struct private_handle_t
 	{
 		version = sizeof(native_handle);
 		numFds = sNumFds;
-		numInts = sNumInts;
+		numInts = (sizeof(private_handle_t) - sizeof(native_handle)) / sizeof(int) - sNumFds;
 	}
 
 #endif
@@ -304,7 +295,7 @@ struct private_handle_t
 	{
 		version = sizeof(native_handle);
 		numFds = sNumFds;
-		numInts = sNumInts;
+		numInts = (sizeof(private_handle_t) - sizeof(native_handle)) / sizeof(int) - sNumFds;
 	}
 
 	~private_handle_t()
@@ -321,7 +312,9 @@ struct private_handle_t
 	{
 		const private_handle_t *hnd = (const private_handle_t *)h;
 
-		if (!h || h->version != sizeof(native_handle) || h->numInts != sNumInts || h->numFds != sNumFds || hnd->magic != sMagic)
+		if (!h || h->version != sizeof(native_handle) || h->numFds != sNumFds ||
+		        h->numInts != (sizeof(private_handle_t) - sizeof(native_handle)) / sizeof(int) - sNumFds ||
+		        hnd->magic != sMagic)
 		{
 			return -EINVAL;
 		}
